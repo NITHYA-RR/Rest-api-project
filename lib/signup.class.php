@@ -7,6 +7,7 @@ class signup{
     private $username;
     private $password;
     private $email;
+    private $token;
 
     private $db;
     private $id;
@@ -20,7 +21,7 @@ class signup{
             throw new Exception("User already exists");
         }
         $bytes = random_bytes(16);
-        $token = bin2hex($bytes);
+        $this->token = $token = bin2hex($bytes);
         $password = $this->hashPassword($password);
 
         $query = "INSERT INTO `auth` (`username`, `password`, `email`, `token`, `action`) 
@@ -35,6 +36,9 @@ class signup{
     }
 
     function sendEmailVerification(){
+
+        $config_json = file_get_contents("config.json");
+        $config = json_decode($config_json, true);
         
 
     }

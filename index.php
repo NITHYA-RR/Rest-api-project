@@ -1,15 +1,11 @@
 <?php
     error_reporting(E_ALL ^ E_DEPRECATED);
     require_once("REST.api.php");
+    require_once("lib/database.class.php");
 
     class API extends REST {
 
         public $data = "";
-
-        const DB_SERVER = "localhost";
-        const DB_USER = "root";
-        const DB_PASSWORD = "";
-        const DB = "apis";
 
         private $db = NULL;
 
@@ -17,22 +13,38 @@
             parent::__construct();                // Init parent contructor
             $this->dbConnect();                    // Initiate Database connection
         }
-
         /*
            Database connection
         */
+
         private function dbConnect(){
-            if ($this->db != NULL) {
-				return $this->db;
-			} else {
-				$this->db = mysqli_connect(self::DB_SERVER,self::DB_USER,self::DB_PASSWORD, self::DB);
-				if (!$this->db) {
-					die("Connection failed: ".mysqli_connect_error());
-				} else {
-					return $this->db;
-				}
-			}
+    if ($this->db != NULL) {
+        return $this->db;
+    } else {
+        // Read database credentials from env.json
+        $envPath = __DIR__ . '/../env.json';
+        $env = file_get_contents($envPath);
+        $envjson = json_decode($env, true);
+        $servername = $envjson['db_server'];
+        $username = $envjson['db_username'];
+        $password = $envjson['db_password'];
+        $dbname = $envjson['db_name'];
+
+        $this->db = mysqli_connect($servername, $username, $password, $dbname);
+        if (!$this->db) {
+            die("Connection failed: " . mysqli_connect_error());
+        } else {
+            return $this->db;
         }
+        // $connector = new DatabaseConnec();
+        // $db = $connector->dbConnect();
+        // if ($db) {
+        // echo "✅ Database connected successfully!";
+        // } else {
+        // echo "❌ Failed to connect to database!";
+        // }
+    }
+}
 
         /*
          * Public method for access api.
@@ -94,84 +106,39 @@
                 $this->response($data,101);
         }
 
-        private function get_current_user(){
-            $username = $this->is_logged_in();
-            if($username){
-                $data = [
-                    "username"=> $username
-                ];
-                $this->response($this->json($data), 200);
-            } else {
-                $data = [
-                    "error"=> "unauthorized"
-                ];
-                $this->response($this->json($data), 403);
-            }
+
+     
+
+
+
+        function generate_hash(){
+            $bytes = random_bytes(16);
+            return bin2hex($bytes);
         }
 
-        private function logout(){
-            $username = $this->is_logged_in();
-            if($username){
-                $headers = getallheaders();
-                $auth_token = $headers["Authorization"];
-                $auth_token = explode(" ", $auth_token)[1];
-                $query = "DELETE FROM session WHERE session_token='$auth_token'";
-                $db = $this->dbConnect();
-                if(mysqli_query($db, $query)){
-                    $data = [
-                        "message"=> "success"
-                    ];
-                    $this->response($this->json($data), 200);
-                } else {
-                    $data = [
-                        "user"=> $this->is_logged_in()
-                    ];
-                    $this->response($this->json($data), 200);
-                }
-            } else {
-                $data = [
-                    "user"=> $this->is_logged_in()
-                ];
-                $this->response($this->json($data), 200);
-            }
+
+
+        public function getUsername(){
+        return $_SESSION['username'];
+    }
+        public function getUserID(){
+            return $_SESSION['user_id'];
         }
+        
 
-        private function user_exists(){
-            if(isset($this->_request['data'])){
-                $data = $this->_request['data'];
-                $db = $this->dbConnect();
-                $result = mysqli_query($db, "SELECT id, username, mobile FROM users WHERE id='$data' OR username='$data' OR mobile='$data'");
-                if($result){
-                    $result = mysqli_fetch_array($result, MYSQLI_ASSOC);
-                    $this->response($this->json($result), 200);
-                } else {
-                    $data = [
-                        "error"=>"user_not_found"
-                    ];
-                    $this->response($this->json($data), 404);
-                }
-
-            } else {
-                $data = [
-                    "error"=>"expectation_failed"
-                ];
-                $this->response($this->json($data), 417);
-            }
-        }
-
-        private function signup(){
+         private function signup(){
             if($this->get_request_method() != "POST"){
                 $data = [
                     "error"=>"method_not_allowed"
                 ];
                 $this->response($this->json($data), 405);
             }
-            if(isset($this->_request['username']) and isset($this->_request['password']) and isset($this->_request['mobile'])){
+            if(isset($this->_request['username']) and isset($this->_request['password']) and isset($this->_request['email'])){
                 $username = $this->_request['username'];
                 $password = $this->_request['password'];
-                $mobile = $this->_request['mobile'];
+                $email = $this->_request['email'];
 
-                $query = "INSERT INTO users (username, password, mobile) VALUES ('$username', '$password', '$mobile');";
+                $query = "INSERT INTO users (username, password, email) VALUES ('$username', '$password', '$email');";
 
                 $db = $this->dbConnect();
                 $result = mysqli_query($db, $query);
@@ -194,91 +161,8 @@
             }
         }
 
-        private function login(){
-            if($this->get_request_method() != "POST"){
-                $data = [
-                    "error"=>"method_not_allowed"
-                ];
-                $this->response($this->json($data), 405);
-            }
-
-            if(isset($this->_request['username']) and isset($this->_request['password'])){
-                $db = $this->dbConnect();
-                $username = $this->_request['username'];
-                $password = $this->_request['password'];
-                $result = mysqli_query($db, "SELECT * FROM users WHERE (id='$username' OR username='$username' OR mobile='$username') AND password = '$password'");
-                $d = mysqli_fetch_assoc($result);
-                if($d){
-                    $userid = $d['id'];
-                    $token = $this->generate_hash();
-                    $query = "INSERT INTO `session` (session_token, is_valid, user_id) VALUES ('$token', '1', '$userid');";
-                    if(mysqli_query($db, $query)){
-                        $data = [
-                            "message"=>"success",
-                            "token"=>$token
-                        ];
-                        $this->response($this->json($data), 201);
-                    } else {
-                        $data = [
-                            "error"=>"internal_server_error",
-                            "message"=>mysqli_error($db)
-                        ];
-                        $this->response($this->json($data), 500);
-                    }
-                } else {
-                    $data = [
-                        "error"=>"invalid_credentials"
-                    ];
-                    $this->response($this->json($data), 404);
-                }
-            } else {
-                $data = [
-                    "error"=>"expectation_failed"
-                ];
-                $this->response($this->json($data), 417);
-            }
-        }
-
-        function generate_hash(){
-            $bytes = random_bytes(16);
-            return bin2hex($bytes);
-        }
-
-        function is_logged_in(){
-            $headers = getallheaders();
-            if(isset($headers["Authorization"])){
-                $auth_token = $headers["Authorization"];
-                $auth_token = explode(" ", $auth_token)[1];
-
-                $query = "SELECT * FROM session WHERE session_token='$auth_token'";
-                $db = $this->dbConnect();
-                $_result = mysqli_query($db, $query);
-                $d = mysqli_fetch_assoc($_result);
-                if($d){
-                    $data = $d['user_id'];
-                    $result = mysqli_query($db, "SELECT id, username, mobile FROM users WHERE id='$data' OR username='$data' OR mobile='$data'");
-                    if($result){
-                        $result = mysqli_fetch_array($result, MYSQLI_ASSOC);
-                        return $result["username"];
-                    } else {
-                        return false;
-                    }
-
-                } else {
-                    return false;
-                }
-            } else {
-                return false;
-            }
-        }
 
 
-
-        /*************API SPACE END*********************/
-
-        /*
-            Encode array into JSON
-        */
         private function json($data){
             if(is_array($data)){
                 return json_encode($data, JSON_PRETTY_PRINT);

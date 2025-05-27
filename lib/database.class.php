@@ -4,23 +4,28 @@ class Database{
     public static function getConnection(){
         if (Database::$conn == null){
             
-            $servername = "localhost";
-            $username = "root";
-            $password = "";
-            $dbname = "apis";
+            $envPath = __DIR__ . '/../../env.json';
+            if (!file_exists($envPath)) {
+                die("env.json not found at $envPath");
+            }
+            $env = json_decode(file_get_contents($envPath), true);
+            $servername = $env['db_server'];
+            $username = $env['db_username'];
+            $password = $env['db_password'];
+            $dbname = $env['db_name'];
+    
             
         
             // Create connection
-            $conn = new mysqli($servername, $username, $password, $dbname);
-        
+            self::$conn = mysqli_connect($servername, $username, $password, $dbname);
+
             // Check connection
-            if ($conn->connect_error) {
-                die("Connection failed: " . $conn->connect_error);
+            if (!self::$conn) {
+                die("Connection failed: " . mysqli_connect_error());
             } 
             else{
                 // printf("connection will be created........");
-                Database::$conn = $conn;
-                return Database::$conn; // replaacing null with actual value
+               return self::$conn; // replaacing null with actual value
                
 
             }
