@@ -2,6 +2,7 @@
     error_reporting(E_ALL ^ E_DEPRECATED);
     require_once("REST.api.php");
     require_once("lib/database.class.php");
+    require_once("lib/signup.class.php");
 
     class API extends REST {
 
@@ -127,7 +128,7 @@
         
 
          private function signup(){
-            if($this->get_request_method() != "POST"){
+            if($this->get_request_method() == "POST"){
                 $data = [
                     "error"=>"method_not_allowed"
                 ];
@@ -138,13 +139,22 @@
                 $password = $this->_request['password'];
                 $email = $this->_request['email'];
 
-                $query = "INSERT INTO users (username, password, email) VALUES ('$username', '$password', '$email');";
+                $hashed_password = signup::hashPassword($password);
+
+                // Validate username, password, and email
+
+
+                $query = "INSERT INTO auth (username, password, email) VALUES ('$username', '$password', '$email');";
 
                 $db = $this->dbConnect();
                 $result = mysqli_query($db, $query);
+
                 if($result){
+                    $user_id = mysqli_insert_id($db);
                     $data = [
-                        "message"=>"success"
+                        "message"=>"success $username",
+                        "user_id"=>$user_id,
+
                     ];
                     $this->response($this->json($data), 201);
                 } else {

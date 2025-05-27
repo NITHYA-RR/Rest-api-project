@@ -28,9 +28,10 @@ phpinfo();
 
 //         $this->db = mysqli_connect($servername, $username, $password, $dbname);
 //         if (!$this->db) {
-//             die("Connection failed: " . mysqli_connect_error());
+//             die("Connection failed: " . mysqli_connect_error());  
 //         } else {
-//             return $this->db;
+//             return $this->db;       
+
 //         }
 //     }
 // }

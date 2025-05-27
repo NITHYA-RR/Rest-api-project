@@ -8,29 +8,24 @@ class Database{
             if (!file_exists($envPath)) {
                 die("env.json not found at $envPath");
             }
-            $env = json_decode(file_get_contents($envPath), true);
-            $servername = $env['db_server'];
-            $username = $env['db_username'];
-            $password = $env['db_password'];
-            $dbname = $env['db_name'];
-    
-            
-        
+            $env = file_get_contents($envPath);
+            $envjson = json_decode($env, true);
+            $servername = $envjson['db_server'];
+            $username = $envjson['db_username'];
+            $password = $envjson['db_password'];
+            $dbname = $envjson['db_name'];
             // Create connection
-            self::$conn = mysqli_connect($servername, $username, $password, $dbname);
+            $conn = mysqli_connect($servername, $username, $password, $dbname);
 
             // Check connection
-            if (!self::$conn) {
+            if (!$conn) {
                 die("Connection failed: " . mysqli_connect_error());
             } 
             else{
-                // printf("connection will be created........");
-               return self::$conn; // replaacing null with actual value
-               
-
+    
+               return $conn; // replaacing null with actual value
             }
         } else{
-            // printf("established the connection..");
             return Database::$conn;
             
         }
