@@ -1,11 +1,17 @@
 RewriteEngine On
-RewriteBase / 
+RewriteBase /api/
 
 # Don't rewrite requests for api/index.php itself
 RewriteCond %{REQUEST_URI} ^/api/index\.php$ [NC]
 RewriteRule ^ - [L]
 
-# Rewrite non-existent files and directories to api/index.php with rquest param
+# /api/namespace/method → index.php?rquest=method&namespace=namespace
+RewriteRule ^([^/]+)/([^/]+)$ index.php?rquest=$2&namespace=$1 [L,QSA,NC]
+
+# /api/method → index.php?rquest=method
+RewriteRule ^([^/]+)$ index.php?rquest=$1 [L,QSA,NC]
+
+# Fallback: rewrite non-existent files and directories to index.php
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^(.*)$ api/index.php?rquest=$1 [QSA,NC,L]
+RewriteRule ^(.*)$ index.php?rquest=$1 [QSA,NC,L]

@@ -1,8 +1,8 @@
 <?php
 
-${basename(__FILe__, '.php')} = function(){
+// ${basename(__FILe__, '.php')} = function(){
 
-    $power = $this->name." powers";
-    return $power;
+//     $power = $this->name." powers";
+//     return $power;
     
-};
+// };

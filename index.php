@@ -2,7 +2,7 @@
 error_reporting(E_ALL ^ E_DEPRECATED);
 require_once("REST.api.php");
 require_once("lib/database.class.php");
-require_once("lib/signup.class.php");
+require_once("lib/signup2.class.php");
 
 class API extends REST
 {
@@ -44,68 +44,38 @@ class API extends REST
         }
     }
 
-    /*
-         * Public method for access api.
-         * This method dynmically call the method based on the query string
-         *
-         */
-    public function processApi()
-    {
-
-        $func = strtolower(trim(str_replace("/", "", $_REQUEST['rquest'] ?? '')));
-        if ((int)method_exists($this, $func) > 0) {
+public function processApi(){
+     
+$func = strtolower(trim(str_replace("/", "", $_REQUEST['rquest'] ?? '')));
+        if((int)method_exists($this,$func) > 0){
             $this->$func();
-        } else if (isset($_GET['namespace'])) {
-            // Always ensure a single slash between 'apis' and namespace
-            $dir = __DIR__ . '/api/apis/' . ltrim($_GET['namespace'], '/');
-            if (!is_dir($dir)) {
-                $this->response($this->json(['error' => 'namespace not found']), 404);
-                return;
-            }
-            $files = scandir($dir);
-            $found = false;
-            foreach ($files as $file) {
-                if ($file == "." || $file == "..") {
-                    continue;
-                }
-                $baseName = basename($file, '.php');
-                if ($baseName == $func) {
-                    include($dir . '/' . $file);
-                    if (isset(${$baseName}) && is_callable(${$baseName})) {
-                        $this->current_call = Closure::bind(${$baseName}, $this, get_class());
-                        $this->$baseName();
-                    } else if (function_exists($baseName)) {
-                        $this->current_call = $baseName;
-                        $this->$baseName();
-                    } else {
-                        $this->response($this->json(['error' => 'function not found in namespace']), 404);
-                    }
-                    $found = true;
-                    break;
-                }
-            }
-            if (!$found) {
-                $this->response($this->json(['error' => 'method not found in namespace']), 404);
-            }
+        }
+        else {
+            if(isset($_GET['namespace'])){
+    $namespace = trim($_GET['namespace'], '/');
+    $dir = __DIR__ . '/apis/' . $namespace;
+    $file = $dir . '/' . $func . '.php';
+    if(file_exists($file)){
+        include $file;
+        if (isset(${$func}) && is_callable(${$func})) {
+            $this->current_call = Closure::bind(${$func}, $this, get_class());
+            call_user_func($this->current_call);
+        } else if (function_exists($func)) {
+            $this->current_call = $func;
+            call_user_func($this->current_call);
         } else {
-            $this->response($this->json(['error' => 'method not found??????????????']), 404);
-            echo $dir;
+            $this->response($this->json(['error' => 'function_not_found_in_namespace']), 404);
+        }
+    } else {
+        $this->response($this->json(['error'=>'method_not_found']),404);
+    }
+} else {
+    $this->response($this->json(['error'=>'method_not_found!!!']),404);
+}
+   
         }
     }
-/*************API SPACE START*******************/
 
-public function __call($method, $args)
-{
-    if(is_callable($this->current_call)){
-        return call_user_func_array($this->current_call, $args);
-    } else {
-        $error = array('status' => 'NOT_FOUND', "msg" => "The requested method does not exist.");
-        $error = $this->json($error);
-        $this->response($error, 404);
-    }
-}
-
-/*************API SPACE END*******************/
 private function about()
     {
 
