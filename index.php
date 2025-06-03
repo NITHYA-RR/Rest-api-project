@@ -3,6 +3,8 @@ error_reporting(E_ALL ^ E_DEPRECATED);
 require_once("REST.api.php");
 require_once("lib/database.class.php");
 require_once("lib/signup2.class.php");
+require_once("lib/User.class.php");
+require_once("lib/Auth.class.php");
 
 class API extends REST
 {

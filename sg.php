@@ -1,68 +1,12 @@
+<pre>
 <?php
+require __DIR__ . '/lib/User.class.php';
+require __DIR__ . '/vendor/autoload.php';
 
-class ApiHandler {
-    private $current_call;
-
-    public function processApi(){
-        $func = strtolower(trim(str_replace("/","",$_REQUEST['rquest'])));
-        if((int)method_exists($this,$func) > 0){ 
-            $this->$func();
-        }
-        else {
-            if(isset($_GET['namespace'])){
-                $dir =  __DIR__ .'/apis'.$_GET['namespace'];
-                $file = $dir.'/'.$func.'.php';
-                if(file_exists($file)){
-                    include $file;
-                    $this->current_call = Closure::bind(${$func}, $this, get_class());
-                    $this->$func();
-                } else {
-                    $this->response($this->json([
-                    'error' => 'method_not_found',
-                    'message' => 'The method was not found in the specified namespace.',
-                     'searched_path' => $file,
-                    'namespace_dir' => $dir
-    ]), 404);
-                }
-
-                /** 
-                 * Use the following snippet if you want to include multiple files
-                 */
-                // $methods = scandir($dir);
-                // //var_dump($methods);
-                // foreach($methods as $m){
-                //     if($m == "." or $m == ".."){
-                //         continue;
-                //     }
-                //     $basem = basename($m, '.php');
-                //     //echo "Trying to call $basem() for $func()\n";
-                //     if($basem == $func){
-                //         include $dir."/".$m;
-                //         $this->current_call = Closure::bind(${$basem}, $this, get_class());
-                //         $this->$basem();
-                //     }
-                // }
-            } else {
-                //we can even process functions without namespace here.
-                $this->response($this->json(['error'=>'method_not_found$$$$$s']),404);
-            }
-        }
-    }
-
-    public function __call($method, $args)
-    {
-        if(is_callable($this->current_call)){
-            return call_user_func_array($this->current_call, $args);
-        } else {
-            $error = array('status' => 'NOT_FOUND', "msg" => "The requested method does not exist.");
-            $error = $this->json($error);
-            $this->response($error, 404);
-        }
-    }
-}
-
-
-
+$user = new User('Ramya@gmail.com');
+echo $user->getUsername();
+?>
+</pre>
 
 
 
