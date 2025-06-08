@@ -5,6 +5,8 @@ require_once("lib/database.class.php");
 require_once("lib/signup2.class.php");
 require_once("lib/User.class.php");
 require_once("lib/Auth.class.php");
+require_once $_SERVER['DOCUMENT_ROOT'].'/api/vendor/autoload.php';
+
 
 class API extends REST
 {
@@ -13,6 +15,7 @@ class API extends REST
 
     private $db = NULL;
     private $current_call;
+    public $auth = null;
 
     public function __construct()
     {
@@ -77,20 +80,6 @@ $func = strtolower(trim(str_replace("/", "", $_REQUEST['rquest'] ?? '')));
    
         }
     }
-
-private function about()
-    {
-
-        if ($this->get_request_method() != "POST") {
-            $error = array('status' => 'WRONG_CALL', "msg" => "The type of call cannot be accepted by our servers.");
-            $error = $this->json($error);
-            $this->response($error, 406);
-        }
-        $data = array('version' => '0.1', 'desc' => 'This API is created by Blovia Technologies Pvt. Ltd., for the public usage for accessing data about vehicles.');
-        $data = $this->json($data);
-        $this->response($data, 200);
-    }
-
     private function verify()
     {
         $user = $this->_request['user'];
@@ -124,23 +113,56 @@ private function about()
         $this->response($data, 101);
     }
 
+    public function auth(){
+        $headers = getallheaders();
+        if(isset($headers['Authorization'])){
+            $token = explode(' ', $headers['Authorization']);
+            $this->auth = new Auth($token[1]);
+        }
+    }
+
+
+  public function isAuthenticated(){
+        if($this->auth == null){
+            return false;
+        }
+        if($this->auth->getOAuth()->authenticate() and isset($_SESSION['username'])){
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public function die($e){
+        $data = [
+            "error" => $e->getMessage()
+        ];
+        $response_code = 400;
+        if($e->getMessage() == "Expired token" || $e->getMessage() == "Unauthorized"){
+            $response_code = 403;
+        }
+
+        if($e->getMessage() == "Not found"){
+            $response_code = 404;
+        }
+        $data = $this->json($data);
+        $this->response($data,$response_code);
+    }
 
 
 
 
-
-    function generate_hash()
+    public function generate_hash()
     {
         $bytes = random_bytes(16);
         return bin2hex($bytes);
     }
 
-
-
     public function getUsername()
     {
         return $_SESSION['username'];
     }
+
     public function getUserID()
     {
         return $_SESSION['user_id'];
@@ -158,4 +180,9 @@ private function about()
 // Initiiate Library
 
 $api = new API;
-$api->processApi();
+try {
+    $api->auth();
+    $api->processApi();
+} catch (Exception $e){
+    $api->die($e);
+};
